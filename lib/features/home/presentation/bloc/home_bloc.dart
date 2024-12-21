@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:bloc/bloc.dart';
+import 'package:bsc/shared/utils/dio_client.dart';
+import 'package:bsc/shared/utils/service_locator.dart';
 import 'package:equatable/equatable.dart';
 
 part 'home_event.dart';
@@ -11,33 +14,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (event is LoadDataEvent) {
       yield HomeLoading();
       try {
-        // Here, replace with actual data fetching logic (e.g., API calls)
-        final List<Map<String, String>> pourVousData = [
-          {
-            "image": "assets/parc2.jpg",
-            "name": "Korso Hauberge",
-            "location": "Boumerdas"
-          },
-          {"image": "assets/hotel.png", "name": "Hayatt", "location": "Boumerdas"},
-        ];
-        final List<Map<String, String>> destinationsTendanceData = [
-          {"image": "assets/parc.jpg", "name": "Korso Parc", "location": "Boumerdas"},
-          {
-            "image": "assets/hauberge.jpg",
-            "name": "Family Parc",
-            "location": "Boumerdas"
-          },
-          {"image": "assets/aqua.png", "name": "Aqua Blue", "location": "Boumerdas"},
-        ];
-        final List<Map<String, String>> offresSpecialesData = [
-          {"image": "assets/offre.png"},
-          {"image": "assets/offre.png"},
-          {"image": "assets/offre.png"},
-        ];
+        final response = await sl<DioClient>().get('api/homedata');
 
-        yield HomeLoaded(pourVousData, destinationsTendanceData, offresSpecialesData);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+
+          final List<Map<String, String>> pourVousData =
+              List<Map<String, String>>.from(data['pourVousData']);
+          final List<Map<String, String>> destinationsTendanceData =
+              List<Map<String, String>>.from(data['destinationsTendanceData']);
+          final List<Map<String, String>> offresSpecialesData =
+              List<Map<String, String>>.from(data['offresSpecialesData']);
+
+          yield HomeLoaded(
+              pourVousData, destinationsTendanceData, offresSpecialesData);
+        } else {
+          yield HomeError('Failed to load data: ${response.statusCode}');
+        }
       } catch (e) {
-        yield HomeError("Failed to load data");
+        yield HomeError('Failed to load data: $e');
       }
     }
   }
